@@ -8,9 +8,9 @@
 #   uv pip install jupyter notebook ipykernel pandas matplotlib seaborn numpy
 
 [project]
-name = "mapreduce-knn"
+name = "homework"
 version = "0.1.0"
-description = "KNN MapReduce Performance Testing with Jupyter"
+description = "For run python in homework"
 requires-python = ">=3.10"
 dependencies = [
     "jupyter>=1.0.0",
