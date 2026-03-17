@@ -14,7 +14,8 @@ dependencies = [
     "pandas>=2.2,<3",
     "pyspark==3.3.1",
     "seaborn>=0.13,<0.14",
-    "graphframes>=0.6"
+    "graphframes>=0.6",
+    "python-logstash-async<4"
 ]
 
 [tool.uv]
