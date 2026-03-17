@@ -4,6 +4,7 @@ import csv
 import json
 import math
 import os
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -53,12 +54,46 @@ def ensure_local_data() -> dict[str, str]:
     }
 
 
+def _resolve_hdfs_command() -> list[str]:
+    candidates: list[list[str]] = []
+    seen: set[tuple[str, ...]] = set()
+
+    def add_candidate(command: list[str]) -> None:
+        key = tuple(command)
+        if key not in seen:
+            seen.add(key)
+            candidates.append(command)
+
+    if hdfs_path := shutil.which("hdfs"):
+        add_candidate([hdfs_path, "dfs"])
+    if hadoop_path := shutil.which("hadoop"):
+        add_candidate([hadoop_path, "fs"])
+
+    for root in filter(None, (os.environ.get("HADOOP_HOME"), "/home/hadoop/hadoop")):
+        root_path = Path(root)
+        hdfs_path = root_path / "bin" / "hdfs"
+        if hdfs_path.exists():
+            add_candidate([str(hdfs_path), "dfs"])
+        hadoop_path = root_path / "bin" / "hadoop"
+        if hadoop_path.exists():
+            add_candidate([str(hadoop_path), "fs"])
+
+    if candidates:
+        return candidates[0]
+
+    raise FileNotFoundError(
+        "Unable to find an HDFS CLI. Install Hadoop or set HADOOP_HOME so "
+        "`sync_data_to_hdfs()` can use `hdfs dfs` or `hadoop fs`."
+    )
+
+
 def sync_data_to_hdfs() -> dict[str, str]:
     local = ensure_local_data()
+    hdfs_command = _resolve_hdfs_command()
     commands = [
-        ["hdfs", "dfs", "-mkdir", "-p", HDFS_DIR],
-        ["hdfs", "dfs", "-put", "-f", local["station_csv"], f"{HDFS_DIR}/station.csv"],
-        ["hdfs", "dfs", "-put", "-f", local["trip_csv"], f"{HDFS_DIR}/trip.csv"],
+        hdfs_command + ["-mkdir", "-p", HDFS_DIR],
+        hdfs_command + ["-put", "-f", local["station_csv"], f"{HDFS_DIR}/station.csv"],
+        hdfs_command + ["-put", "-f", local["trip_csv"], f"{HDFS_DIR}/trip.csv"],
     ]
     for command in commands:
         subprocess.run(command, check=True)
